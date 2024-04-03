@@ -18,11 +18,12 @@ import VideoPost from "./media/videoPost";
 const pageSize = 5
 
 const calGap = (noOfPosts) => {
+  if(noOfPosts === 1) return 700
   return Math.floor(noOfPosts / 2) * 700;
 }
 
-let gap = calGap(pageSize); // To fetch 5 posts. gap should be (5//2)*700
-let limit = gap;
+let initGap = calGap(pageSize); // To fetch 5 posts. gap should be (5//2)*700
+let limit = initGap;
 
 const youtubeBaseUrl = "https://www.youtube.com/watch?v="
 
@@ -31,23 +32,27 @@ function ListTimelinePosts({ userId, initPageNo }) {
   const [postsInfo, addPostsInfo] = useState({ preLn: 0, data: [] });
   const [noData, setNoData] = useState(false);
   const [pageNo, setPageNo] = useState(initPageNo)
+  const [gap, setGap] = useState(initGap)
 
   useEffect(() => {
     window.scrollTo(0, 0);
 
     (async () => {
+      if (pageNo <= 0) return;
       try {
         let resp = await GetAnyTypePostForTimeline(pageNo, pageSize);
         if (resp.nextPage === -1) {
           setNoData(true);
           setPageNo(-1)
-          SetPageNoInLS(-1)
+          SetPageNoInLS(1)
           return;
         }
-        gap = calGap(resp.count)
+        setGap(calGap(resp.count))
         addPostsInfo({ preLn: resp.count, data: resp.data });
-        setPageNo(initPageNo+1)
-        SetPageNoInLS(initPageNo+1)
+        setPageNo(preVal => {
+          SetPageNoInLS(resp.nextPage)
+          return resp.nextPage
+        })
       } catch (err) {
         if (err instanceof UnAuthorizedError) {
           navigate("/login", { replace: true });
@@ -58,7 +63,10 @@ function ListTimelinePosts({ userId, initPageNo }) {
   }, []);
 
   useEffect(() => {
+    if (pageNo <= 0) return;
+
     const handleScroll = async () => {
+      
       if (window.scrollY > limit) {
         limit += gap;
         if (postsInfo.preLn === 0 || pageNo === -1) {
@@ -74,13 +82,15 @@ function ListTimelinePosts({ userId, initPageNo }) {
                 data: prevPosts.data.concat(resp2.data),
               };
             });
-            gap = calGap(resp2.count)
-            setPageNo( prevPg => prevPg + 1 )
-            SetPageNoInLS(pageNo+1)
-          } else {
-            setPageNo(-1)
-            SetPageNoInLS(-1)
-          }
+            setGap( calGap(resp2.count) )
+            setPageNo( prevPg => {
+              SetPageNoInLS(resp2.nextPage)
+              return resp2.nextPage;
+            })
+            return
+          } 
+          setPageNo(-1)
+          SetPageNoInLS(1)
         } catch (err) {
           if (err instanceof UnAuthorizedError) {
             navigate("/login", { replace: true });
