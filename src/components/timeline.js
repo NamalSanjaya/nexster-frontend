@@ -74,7 +74,7 @@ function ListTimelinePosts({ userId, initPageNo }) {
                 data: prevPosts.data.concat(resp2.data),
               };
             });
-            gap = calGap(resp2.count-2)
+            gap = calGap(resp2.count)
             setPageNo( prevPg => prevPg + 1 )
             SetPageNoInLS(pageNo+1)
           } else {
